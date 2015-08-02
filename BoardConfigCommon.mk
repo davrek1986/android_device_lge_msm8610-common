@@ -17,9 +17,9 @@
 USE_CAMERA_STUB := true
 
 # inherit from the proprietary version
--include vendor/lge/w5-common/BoardConfigVendor.mk
+-include vendor/lge/msm8610-common/BoardConfigVendor.mk
 
-LOCAL_PATH := device/lge/w5-common
+LOCAL_PATH := device/lge/msm8610-common
 
 # Platform
 TARGET_BOARD_PLATFORM_GPU := qcom-adreno302
@@ -34,7 +34,7 @@ TARGET_CPU_VARIANT := krait
 
 # Bootloader
 TARGET_NO_BOOTLOADER := true
-TARGET_BOOTLOADER_BOARD_NAME := w5
+TARGET_BOOTLOADER_BOARD_NAME := MSM8610
 
 # Kernel
 BOARD_CUSTOM_BOOTIMG := true
@@ -63,7 +63,7 @@ BOARD_RECOVERY_SWIPE := true
 BOARD_SUPPRESS_EMMC_WIPE := true
 BOARD_USE_CUSTOM_RECOVERY_FONT := \"roboto_15x24.h\"
 TARGET_RECOVERY_PIXEL_FORMAT := "RGBX_8888"
-TARGET_RECOVERY_FSTAB := device/lge/w5-common/rootdir/etc/fstab.msm8610
+TARGET_RECOVERY_FSTAB := device/lge/msm8610-common/rootdir/etc/fstab.msm8610
 
 # Qualcomm support
 BOARD_USES_QCOM_HARDWARE := true
@@ -93,7 +93,7 @@ AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS := true
 BOARD_HAVE_BLUETOOTH := true
 BOARD_HAVE_BLUETOOTH_QCOM := true
 BLUETOOTH_HCI_USE_MCT := true
-BOARD_BLUETOOTH_BDROID_BUILDCFG_INCLUDE_DIR := device/lge/w5-common/bluetooth
+BOARD_BLUETOOTH_BDROID_BUILDCFG_INCLUDE_DIR := device/lge/msm8610-common/bluetooth
 
 # Wifi
 BOARD_HAS_QCOM_WLAN := true
