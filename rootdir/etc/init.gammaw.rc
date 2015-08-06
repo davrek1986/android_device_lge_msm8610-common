@@ -24,46 +24,56 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
- 
-import init.zetaw.usb.rc
+
+import init.gammaw.usb.rc
 import init.lge.log.rc
-#LG_UPDATE_START :  move to init.zetaw.bt_vendor.rc to seperate vendor's resource 20140106, [START]
-import init.zetaw.bt_vendor.rc
-#LG_UPDATE_END :  20140106, [END]
+import init.lge.svelte.rc
+
 on early-init
-	mount debugfs debugfs /sys/kernel/debug
+    mount debugfs debugfs /sys/kernel/debug
 
 on init
     # Set permissions for persist partition
     mkdir /persist 0771 system system
     mkdir /persist-lg 0771 system system
     mkdir /sns 0775 system system
-
     mkdir /storage 0751 system sdcard_r
-    mkdir /storage/sdcard1 0700 root root
+    mkdir /storage/external_SD 0700 root root
     mkdir /mnt/media_rw 0700 media_rw media_rw
-    mkdir /mnt/media_rw/sdcard1 0700 media_rw media_rw
+    mkdir /mnt/media_rw/external_SD 0700 media_rw media_rw
+    # See storage config details at http://source.android.com/tech/storage/
     mkdir /mnt/shell/emulated 0700 shell shell
     mkdir /storage/emulated 0555 root root
+    # Palman ok
+    # mkdir /storage/emulated/legacy 0555 root root
+    # Palman nok so extermination!!
+
+
 
     export EXTERNAL_STORAGE /storage/emulated/legacy
+    export EXTERNAL_ADD_STORAGE /storage/external_SD
+    export SECONDARY_STORAGE /storage/external_SD
     export EMULATED_STORAGE_SOURCE /mnt/shell/emulated
     export EMULATED_STORAGE_TARGET /storage/emulated
-    export SECONDARY_STORAGE /storage/sdcard1:/storage/usbdisk
 
-    # for backwards compatibility
+    # Support legacy paths
     symlink /storage/emulated/legacy /sdcard
     symlink /storage/emulated/legacy /mnt/sdcard
     symlink /storage/emulated/legacy /storage/sdcard0
     symlink /mnt/shell/emulated/0 /storage/emulated/legacy
-    symlink /storage/sdcard1 /extSdCard
-    symlink /storage/sdcard1 /mnt/extSdCard
-    symlink /storage/sdcard1 /external_sd
-    symlink /storage/usbdisk /usbdisk
-    symlink /storage/usbdisk /mnt/usbdisk
 
-    # NFC fix
-    symlink /dev/pn547 /dev/pn544
+    # LGE_UPDATE_START, 2013/5/8, G2-FS@lge.com
+    wait /dev/block/platform/msm_sdcc.1/by-name/userdata
+    wait /dev/block/platform/msm_sdcc.1/by-name/cache
+    wait /dev/block/platform/msm_sdcc.1/by-name/drm
+    wait /dev/block/platform/msm_sdcc.1/by-name/sns
+    exec /sbin/setup_fs_static \
+        /dev/block/platform/msm_sdcc.1/by-name/userdata \
+        /dev/block/platform/msm_sdcc.1/by-name/cache \
+        /dev/block/platform/msm_sdcc.1/by-name/drm \
+        /dev/block/platform/msm_sdcc.1/by-name/sns \
+        no_reboot
+    # LGE_UPDATE_END
 
 # SD Enc
     setprop ro.ssbd.session /dev/block/platform/msm_sdcc.1/by-name/eksst
@@ -72,7 +82,9 @@ on fs
 
 # sreadahead daemon
 on post-fs
-	#start sreadahead
+	start sreadahead
+	# seandroid using auditd
+	mkdir /data/misc/audit 02750 system system
 	chmod 664 /sys/devices/virtual/input/lge_touch/touch_gesture
 	chown system system /sys/devices/virtual/input/lge_touch/touch_gesture
 	chmod 664 /sys/devices/virtual/input/lge_touch/knock_on_type
@@ -83,51 +95,50 @@ on post-fs
 	chown system system /sys/devices/virtual/input/lge_touch/lpwg_data
 	chmod 664 /sys/devices/virtual/input/lge_touch/lpwg_notify
 	chown system system /sys/devices/virtual/input/lge_touch/lpwg_notify
-	chmod 664 /sys/devices/virtual/input/lge_touch/incoming_call
-	chown system system /sys/devices/virtual/input/lge_touch/incoming_call
-	chmod 664 /sys/devices/virtual/input/lge_touch/lockscreen
-	chown system system /sys/devices/virtual/input/lge_touch/lockscreen
-	chmod 664 /sys/devices/virtual/input/lge_touch/ime_status
-	chown system system /sys/devices/virtual/input/lge_touch/ime_status
+
+# LGE_CHANGE_S
+# enable chargerlogo
+on chargerlogo
+   stop bootlogo
+   exec /sbin/chargerlogo
+#LGE_CHANGE_E
 
 on early-boot
     # set RLIMIT_MEMLOCK to 64MB
     setrlimit 8 67108864 67108864
-    # Allow subsystem (modem etc) debugging
-    write /sys/module/subsystem_restart/parameters/enable_debug ${persist.sys.ssr.enable_debug}
-    exec /system/bin/sh /init.zetaw.early_boot.sh ${ro.board.platform}
-    exec /system/bin/sh /init.zetaw.syspart_fixup.sh ${ro.board.platform} ${ro.serialno}
+    exec /system/bin/sh /init.gammaw.early_boot.sh ${ro.board.platform}
+    exec /system/bin/sh /init.gammaw.syspart_fixup.sh ${ro.board.platform} ${ro.serialno}
     # disable lmk_fast_run
     write /sys/module/lowmemorykiller/parameters/lmk_fast_run 0
 
 on boot
-# ADD LGODL
+#[P6/ModemBSP] ADD LGODL [START]
     chmod 0755 /system/bin/lg_dm_dev_router
-#LG_UPDATE_START :  move to init.zetaw.bt_vendor.rc to seperate vendor's resource 20140106, [START]
-#    chown bluetooth bluetooth /sys/module/bluetooth_power/parameters/power
-#    chown bluetooth bluetooth /sys/class/rfkill/rfkill0/type
-#    chown bluetooth bluetooth /sys/class/rfkill/rfkill0/state
-#    chown bluetooth bluetooth /proc/bluetooth/sleep/proto
-#    chown bluetooth bluetooth /sys/module/hci_uart/parameters/ath_lpm
-#    chown bluetooth bluetooth /sys/module/hci_uart/parameters/ath_btwrite
-#    chown system system /sys/module/sco/parameters/disable_esco
-#    chown bluetooth bluetooth /sys/module/hci_smd/parameters/hcismd_set
-#    chmod 0660 /sys/module/bluetooth_power/parameters/power
-#    chmod 0660 /sys/module/hci_smd/parameters/hcismd_set
-#    chmod 0660 /sys/class/rfkill/rfkill0/state
-#    chmod 0660 /proc/bluetooth/sleep/proto
-#    chown bluetooth bluetooth /dev/ttyHS0
-#    chmod 0660 /sys/module/hci_uart/parameters/ath_lpm
-#    chmod 0660 /sys/module/hci_uart/parameters/ath_btwrite
-#    chmod 0660 /dev/ttyHS0
-#    chown bluetooth bluetooth /sys/devices/platform/msm_serial_hs.0/clock
-#    chmod 0660 /sys/devices/platform/msm_serial_hs.0/clock
-#	 chown system system /sys/devices/platform/kcal_ctrl.0/kcal
-#	 chown system system /sys/devices/platform/kcal_ctrl.0/kcal_ctrl
+#[P6/ModemBSP] ADD LGODL [END]
+    chown bluetooth bluetooth /sys/module/bluetooth_power/parameters/power
+    chown bluetooth bluetooth /sys/class/rfkill/rfkill0/type
+    chown bluetooth bluetooth /sys/class/rfkill/rfkill0/state
+    chown bluetooth bluetooth /proc/bluetooth/sleep/proto
+    chown bluetooth bluetooth /proc/bluetooth/sleep/lpm
+    chown bluetooth bluetooth /proc/bluetooth/sleep/btwrite
+    chown system system /sys/module/sco/parameters/disable_esco
+    chown bluetooth bluetooth /sys/module/hci_smd/parameters/hcismd_set
+    chmod 0660 /sys/module/bluetooth_power/parameters/power
+    chmod 0660 /sys/module/hci_smd/parameters/hcismd_set
+    chmod 0660 /sys/class/rfkill/rfkill0/state
+    chmod 0660 /proc/bluetooth/sleep/proto
+    chmod 0660 /proc/bluetooth/sleep/lpm
+    chmod 0660 /proc/bluetooth/sleep/btwrite
+    chown bluetooth bluetooth /dev/ttyHS0
+    chmod 0660 /dev/ttyHS0
+    chown bluetooth bluetooth /sys/devices/platform/msm_serial_hs.0/clock
+    chmod 0660 /sys/devices/platform/msm_serial_hs.0/clock
 
-#    chmod 0660 /dev/ttyHS2
-#    chown bluetooth bluetooth /dev/ttyHS2
-#LG_UPDATE_END :  20140106, [END]
+    chmod 0660 /dev/ttyHS2
+    chown bluetooth bluetooth /dev/ttyHS2
+#[Sensor] Change Calibration File Ownership for setting app [START]
+    chown system system /sys/class/input/input1/run_fast_calibration
+#[Sensor] Change Calibration File Ownership for setting app [END]
 
     #Create QMUX deamon socket area
     mkdir /dev/socket/qmux_radio 0770 radio radio
@@ -155,39 +166,11 @@ on boot
     #Remove SUID bit for iproute2 ip tool
     chmod 0755 /system/bin/ip
 
-    #Create directory used by sensor subsystem(dsps)
-    mkdir /data/system/sensors
-    chmod 665 /data/system/sensors
-    write /data/system/sensors/settings 1
-    chmod 660 /data/system/sensors/settings
-    # AKM setting data
-    mkdir /data/misc/sensors
-    chmod 775 /data/misc/sensors
-    mkdir /persist/sensors
-    chmod 775 /persist/sensors
 
     chmod 0444 /sys/devices/platform/msm_hsusb/gadget/usb_state
 
     #For bridgemgr daemon to inform the USB driver of the correct transport
     chown radio radio /sys/class/android_usb/f_rmnet_smd_sdio/transport
-
-#   Define TCP buffer sizes for various networks
-#   ReadMin, ReadInitial, ReadMax, WriteMin, WriteInitial, WriteMax,
-    setprop net.tcp.buffersize.default 4096,87380,110208,4096,16384,110208
-    setprop net.tcp.buffersize.lte     524288,1048576,2097152,262144,524288,1048576
-    setprop net.tcp.buffersize.umts    4094,87380,110208,4096,16384,110208
-    setprop net.tcp.buffersize.hspa    4094,87380,1220608,4096,16384,1220608
-    setprop net.tcp.buffersize.hsupa   4094,87380,1220608,4096,16384,1220608
-    setprop net.tcp.buffersize.hsdpa   4094,87380,1220608,4096,16384,1220608
-    setprop net.tcp.buffersize.hspap   4094,87380,1220608,4096,16384,1220608
-    setprop net.tcp.buffersize.edge    4093,26280,35040,4096,16384,35040
-    setprop net.tcp.buffersize.gprs    4092,8760,11680,4096,8760,11680
-    setprop net.tcp.buffersize.evdo    4094,87380,262144,4096,16384,262144
-
-#   Assign TCP buffer thresholds to be ceiling value of technology maximums
-#   Increased technology maximums should be reflected here.
-    write /proc/sys/net/core/rmem_max  2097152
-    write /proc/sys/net/core/wmem_max  2097152
 
     #To allow interfaces to get v6 address when tethering is enabled
     write /proc/sys/net/ipv6/conf/rmnet0/accept_ra 2
@@ -227,11 +210,8 @@ on boot
     # Set the default message loglevel to KERN_INFO
     write /proc/sys/kernel/printk "6 6 1 7"
 
-# byungil.choi@lge.com for SW IrRC
-    chown media media /dev/msm_IRRC_pcm_dec
-    chmod 0660 /dev/msm_IRRC_pcm_dec
-    # display color calibration
-    chown system system /sys/devices/virtual/graphics/fb0/kcal
+    # insmod exfat filesystem module
+    insmod /system/lib/modules/texfat.ko
 
 # msm specific files that need to be created on /data
 on post-fs-data
@@ -245,8 +225,6 @@ on post-fs-data
 
     start last_kmsg_backup
 
-    mkdir /sns/cal/ 0644 system system
-
     mkdir /data/misc/bluetooth 0770 bluetooth bluetooth
 
     # Create the directories used by the Wireless subsystem
@@ -256,8 +234,8 @@ on post-fs-data
     mkdir /data/misc/dhcp 0770 dhcp dhcp
 
 #    chown dhcp dhcp /data/misc/dhcp
-# CONFIG_LGE_WLAN_PATCH
-# to observe dnsmasq.leases file for dhcp information of soft ap.
+#  CONFIG_LGE_WLAN_PATCH
+#  to observe dnsmasq.leases file for dhcp information of soft ap.
     chown dhcp system /data/misc/dhcp
 
     # Create the directories used by CnE subsystem
@@ -288,14 +266,10 @@ on post-fs-data
     chown system system /sys/devices/platform/msm_sdcc.3/polling
     chown system system /sys/devices/platform/msm_sdcc.4/polling
 
-    # Allow Torch app use torch
-    chown system system /sys/class/leds/led:flash_torch/brightness
-    chmod 0666 /sys/class/leds/led:flash_torch/brightness
-
 # Mobile DM Router
     chmod 0660 /dev/lge_dm_tty0
     chown system system /dev/lge_dm_tty0
-	
+
     # SSR feature
     chmod 0660 /dev/ramdump_adsp
     chown system system /dev/ramdump_adsp
@@ -305,30 +279,27 @@ on post-fs-data
 
     chmod 0660 /dev/ramdump_modem
     chown system system /dev/ramdump_modem
-    
+
     chmod 0660 /dev/ramdump_smem-modem
     chown system system /dev/ramdump_smem-modem
-    
+
     chmod 0660 /dev/ramdump_smem-smd
     chown system system /dev/ramdump_smem-smd
-    
+
     chmod 0660 /dev/ramdump_venus
     chown system system /dev/ramdump_venus
 
     chmod 0660 /dev/ramdump_pronto
     chown system system /dev/ramdump_pronto
 
-# ADD LGODL
+#[P6/ModemBSP] ADD LGODL [START]
     chmod 0660 /dev/lge_dm_dev_tty0
     chown system system /dev/lge_dm_dev_tty0
+#[P6/ModemBSP] ADD LGODL [END]
 
     #Create the symlink to qcn wpa_supplicant folder for ar6000 wpa_supplicant
     mkdir /data/system 0775 system system
     #symlink /data/misc/wifi/wpa_supplicant /data/system/wpa_supplicant
-
-    #Create directories for wiper services
-    mkdir /data/wpstiles/ 0755 shell
-    mkdir /data/wiper 0755 gps qcom_oncrpc
 
     #Create directories for gpsone_daemon services
     mkdir /data/misc/gpsone_d 0770 system gps
@@ -372,15 +343,29 @@ on post-fs-data
     chown system system /persist-lg
     chmod 0771 /persist-lg
 
-    #HDCP2.x for Wi-Fi Display
-    mkdir /persist-lg/wfd 0770 system system
-    chown system system /persist-lg/wfd
-    chmod 0770 /persist-lg/wfd
-
 #sns partition permission change
 
     chown system system /sns
     chmod 0775 /sns
+    chown system system /sns/offset_x.dat
+    chmod 0664 /sns/offset_x.dat
+    chown system system /sns/offset_y.dat
+    chmod 0664 /sns/offset_y.dat
+    chown system system /sns/offset_z.dat
+    chmod 0664 /sns/offset_z.dat
+    chown system system /sns/prox_calibration.dat
+    chmod 0664 /sns/prox_calibration.dat
+
+#misc Partition(mmcblk0p13) permission change
+
+	chown root system /dev/block/mmcblk0p13
+	chmod 0660 /dev/block/mmcblk0p13
+
+    # seandroid using auditd
+    mkdir /data/misc/audit 02750 system system
+
+service auditd /system/bin/auditd -k
+    class main
 
 # Export GPIO56 for fusion targets to enable/disable hub
 service usbhub_init /system/bin/usbhub_init
@@ -389,9 +374,11 @@ service usbhub_init /system/bin/usbhub_init
    disabled
    oneshot
 
-on property:init.svc.surfaceflinger=stopped
-    stop ppd
-    stop hdmid
+on property:persist.radio.atfwd.start=false
+    stop atfwd
+
+on property:ro.board.platform=msm7630_fusion
+    start usbhub_init
 
 on property:init.svc.wpa_supplicant=stopped
     stop dhcpcd
@@ -399,6 +386,18 @@ on property:init.svc.wpa_supplicant=stopped
 on property:bluetooth.isEnabled=true
     start btwlancoex
     write /sys/class/bluetooth/hci0/idle_timeout 7000
+
+on property:bluetooth.sap.status=running
+    start bt-sap
+
+on property:bluetooth.sap.status=stopped
+    stop bt-sap
+
+on property:bluetooth.dun.status=running
+    start bt-dun
+
+on property:bluetooth.dun.status=stopped
+    stop bt-dun
 
 on property:ro.bluetooth.ftm_enabled=true
     start ftmd
@@ -408,34 +407,32 @@ service last_kmsg_backup /system/bin/sh /system/etc/last_kmsg_backup.sh
     disabled
     oneshot
 
-service zetaw-c_core-sh /system/bin/sh /init.zetaw.class_core.sh
+service gammaw-c_core-sh /system/bin/sh /init.gammaw.class_core.sh
     class core
     user root
     oneshot
 
-service zetaw-c_main-sh /system/bin/sh /init.class_main.sh
+service gammaw-c_main-sh /system/bin/sh /init.class_main.sh
+    class main
+    user root
+    oneshot
+
+service ril-qmi /system/bin/sh /init.gammaw.ril.sh
     class main
     user root
     oneshot
 
 service sdcard /system/bin/sdcard -u 1023 -g 1023 -l /data/media /mnt/shell/emulated
     class late_start
-    
-service fuse_sdcard1 /system/bin/sdcard -u 1023 -g 1023 -d /mnt/media_rw/sdcard1 /storage/sdcard1
+
+# LGE_CHANGE_S, G2-FS@lge.com, 2013-10-30, fuse for external_SD
+service fuse_external_SD /system/bin/sdcard -u 1023 -g 1023 -w 1023 -d /mnt/media_rw/external_SD /storage/external_SD
     class late_start
     disabled
-
-service fuse_usbdisk /system/bin/sdcard -u 1023 -g 1023 /mnt/media_rw/usbdisk /storage/usbdisk
-    class late_start
-    disabled
-
-# Binding fuse mount point to /storage/emulated/legacy
-on property:init.svc.sdcard=running
-    wait /mnt/shell/emulated/0
-    mount none /mnt/shell/emulated/0 /storage/emulated/legacy bind
+# LGE_CHANGE_E, G2-FS@lge.com, 2013-10-30, fuse for external_SD
 
 on property:vold.decrypt=trigger_restart_framework
-    start zetaw-c_main-sh
+    start gammaw-c_main-sh
     start config_bluetooth
 
 on property:persist.env.fastdorm.enabled=true
@@ -465,6 +462,43 @@ service rfs_access /system/bin/rfs_access
 
 on property:ro.boot.emmc=true
     start rfs_access
+
+on property:bluetooth.start_hci=true
+    start start_hci_filter
+
+on property:bluetooth.start_hci=false
+    stop start_hci_filter
+
+service start_hci_filter /system/bin/wcnss_filter
+    class late_start
+    user bluetooth
+    group bluetooth
+    disabled
+
+service config_bluetooth /system/bin/sh /system/etc/init.gammaw.bt.sh "onboot"
+    class core
+    user root
+    oneshot
+
+service hciattach /system/bin/sh /system/etc/init.gammaw.bt.sh
+    class late_start
+    user bluetooth
+    group bluetooth net_bt_admin
+    disabled
+    oneshot
+
+on property:bluetooth.hciattach=true
+    start hciattach
+
+on property:bluetooth.hciattach=false
+    setprop bluetooth.status off
+
+service hciattach_ath3k /system/bin/sh /system/etc/init.ath3k.bt.sh
+     class late_start
+     user bluetooth
+     group system bluetooth net_bt_admin misc
+     disabled
+     oneshot
 
 service bt-dun /system/bin/dun-server /dev/smd7 /dev/rfcomm0
     class late_start
@@ -519,7 +553,8 @@ service netmgrd /system/bin/netmgrd
 service sensors /system/bin/sensors.qcom
     class late_start
     user root
-    group root radio system
+    group root
+    disabled
 
 on property:ro.use_data_netmgrd=false
     # netmgr not supported on specific target
@@ -529,6 +564,13 @@ on property:ro.use_data_netmgrd=false
 # but only if ro.data.large_tcp_window_size property is set.
 on property:ro.data.large_tcp_window_size=true
     write /proc/sys/net/ipv4/tcp_adv_win_scale  2
+
+service btwlancoex /system/bin/sh /system/etc/init.gammaw.coex.sh
+    class late_start
+    user bluetooth
+    group bluetooth net_bt_admin inet net_admin net_raw
+    disabled
+    oneshot
 
 service amp_init /system/bin/amploader -i
     class late_start
@@ -567,7 +609,7 @@ service p2p_supplicant /system/bin/wpa_supplicant \
 service wpa_supplicant /system/bin/wpa_supplicant \
     -iwlan0 -Dnl80211 -c/data/misc/wifi/wpa_supplicant.conf \
     -I/system/etc/wifi/wpa_supplicant_overlay.conf \
-    -O/data/misc/wifi/sockets \
+    -O/data/misc/wifi/sockets -d \
     -e/data/misc/wifi/entropy.bin -g@android:wpa_wlan0
     #   we will start as root and wpa_supplicant will switch to user wifi
     #   after setting up the capabilities required for WEXT
@@ -578,15 +620,17 @@ service wpa_supplicant /system/bin/wpa_supplicant \
     disabled
     oneshot
 
-service dhcpcd_wlan0 /system/bin/dhcpcd -ABKLG
+#LGE_CHANGE_S, 20120709, moon-wifi@lge.com by 2lee, Remove 'G'(DHCPCD_GATEWAY) option.
+service dhcpcd_wlan0 /system/bin/dhcpcd -ABKL
     class late_start
     disabled
     oneshot
 
-service dhcpcd_p2p /system/bin/dhcpcd -ABKLG
+service dhcpcd_p2p /system/bin/dhcpcd -ABKL
     class late_start
     disabled
     oneshot
+#LGE_CHANGE_E, 20120709, moon-wifi@lge.com by 2lee, Remove 'G'(DHCPCD_GATEWAY) option.
 
 service iprenew_wlan0 /system/bin/dhcpcd -n
     class late_start
@@ -658,18 +702,38 @@ service location_mq /system/bin/location-mq
     group gps
     disabled
 
+service xtwifi_inet /system/bin/xtwifi-inet-agent
+    class late_start
+    user gps
+    group inet gps
+    disabled
+
+service xtwifi_client /system/bin/xtwifi-client
+    class late_start
+    user gps
+    group net_admin wifi inet gps qcom_diag
+    disabled
+
 service lowi-server /system/bin/lowi-server
     class late_start
     user gps
     group gps net_admin wifi inet qcom_diag
     disabled
 
-service fm_dl /system/bin/sh /system/etc/init.zetaw.fm.sh
+service fm_dl /system/bin/sh /system/etc/init.gammaw.fm.sh
     class late_start
     user root
     group system fm_radio
     disabled
     oneshot
+
+on property:crypto.driver.load=1
+     insmod /system/lib/modules/qce.ko
+     insmod /system/lib/modules/qcedev.ko
+
+on property:crypto.driver.load=0
+     exec /system/bin/rmmod qcedev.ko
+     exec /system/bin/rmmod qce.ko
 
 service drmdiag /system/bin/drmdiagapp
     class late_start
@@ -683,18 +747,18 @@ on property:drmdiag.load=1
 on property:drmdiag.load=0
     stop drmdiag
 
-service zetaw-sh /system/bin/sh /init.zetaw.sh
+service gammaw-sh /system/bin/sh /init.gammaw.sh
     class late_start
     user root
     oneshot
 
-service zetaw-post-boot /system/bin/sh /system/etc/init.zetaw.post_boot.sh
+service gammaw-post-boot /system/bin/sh /system/etc/init.gammaw.post_boot.sh
     class late_start
     user root
     disabled
     oneshot
 
-service wifi-sdio-on /system/bin/sh /system/etc/init.zetaw.sdio.sh
+service wifi-sdio-on /system/bin/sh /system/etc/init.gammaw.sdio.sh
     class late_start
     group wifi inet
     disabled
@@ -706,14 +770,14 @@ service wifi-crda /system/bin/sh /system/etc/init.crda.sh
    disabled
    oneshot
 
-on property:init.svc.bootanim=stopped
-    start zetaw-post-boot
 
-service ppd /system/bin/mm-pp-daemon
+on property:init.svc.bootanim=stopped
+    start gammaw-post-boot
+
+service atfwd /system/bin/ATFWD-daemon
     class late_start
     user system
-    socket pps stream 0660 system system graphics
-    group system graphics
+    group system radio
 
 service hostapd /system/bin/hostapd -dddd /data/hostapd/hostapd.conf
     class late_start
@@ -770,16 +834,27 @@ service profiler_daemon /system/bin/profiler_daemon
     group root
     disabled
 
+#service sdcard /system/bin/sdcard -u 1023 -g 1023 -l /data/media /mnt/shell/emulated
+#    class late_start
+
+ 
+
+
+
+# Binding fuse mount point to /storage/emulated/legacy
+# Palman nok so extermination!!!
+#on property:init.svc.sdcard=running
+#    wait /mnt/shell/emulated/0
+#    mount none /mnt/shell/emulated/0 /storage/emulated/legacy bind
+
+on property:vold.decrypt=trigger_restart_framework
+    setprop ro.fuse_sdcard ${persist.fuse_sdcard}
+
 service hcidump /system/bin/sh /system/etc/hcidump.sh
     user bluetooth
     group bluetooth system net_bt_admin net_admin
     disabled
     oneshot
-
-on property:ro.bootmode=chargerlogo
-    class_reset main
-    class_reset late_start
-    class_start charger
 
 service charger /charger
     class charger
@@ -797,7 +872,7 @@ on property:persist.service.dm_app.enable=true
 on property:persist.service.dm_app.enable=false
     stop lg_dm_router
 
-# ADD LGODL
+#[P6/ModemBSP] ADD LGODL [START]
 service lg_dm_dev_router /system/bin/lg_dm_dev_router
     class late_start
     user root
@@ -808,7 +883,8 @@ service lg_dm_dev_router /system/bin/lg_dm_dev_router
 on property:persist.service.lge.odl_on=true
      start lg_dm_dev_router
 on property:persist.service.lge.odl_on=false
-
+#    stop lg_dm_dev_router
+#[P6/ModemBSP] ADD LGODL [END]
 
 service ssr_diag /system/bin/ssr_diag
     class late_start
@@ -817,12 +893,12 @@ service ssr_diag /system/bin/ssr_diag
 
 # SSR setting
 on property:persist.sys.ssr.restart_level=*
-    exec /system/bin/sh /init.zetaw.ssr.sh ${persist.sys.ssr.restart_level} ${ro.build.type}
+    exec /system/bin/sh /init.gammaw.ssr.sh ${persist.sys.ssr.restart_level} ${ro.build.type}
 
 # [BEGIN][LGE_WIFI][QCT][neo-wifi@lge.com] add riva_ramdump service
 # WIFI SSR settings
 on property:persist.sys.ssr.restart_level_w=*
-    exec /system/bin/sh /system/etc/init.zetaw.ssr.wifi.sh ${persist.sys.ssr.restart_level_w}
+    exec /system/bin/sh /system/etc/init.gammaw.ssr.wifi.sh ${persist.sys.ssr.restart_level_w}
 # [END][LGE_WIFI][QCT][neo-wifi@lge.com] add riva_ramdump service
 
 # [BEGIN][LGE_WIFI][QCT][neo-wifi@lge.com] set SSR3 and rivadump enable depends on buildtype
@@ -832,7 +908,7 @@ on property:ro.build.type=user
 on property:ro.build.type=userdebug
     setprop persist.sys.ssr.restart_level_w 3
     setprop persist.service.rivadump.enable 1
-# [END][LGE_WIFI][QCT][neo-wifi@lge.com] set SSR3 and rivadump enable depends on buildtype
+# [END][LGE_WIFI][QCT][neo-wifi@lge.com]  set SSR3 and rivadump enable depends on buildtype
 
 # Define fastmmi
 service fastmmi /system/bin/mmi
@@ -840,7 +916,7 @@ service fastmmi /system/bin/mmi
     group root
     disabled
 
-service fastmmisrv /system/bin/sh /init.zetaw.factory.sh
+service fastmmisrv /system/bin/sh /init.gammaw.factory.sh
     user root
     disabled
     oneshot
@@ -860,6 +936,22 @@ service sreadahead-check /sbin/sreadahead_check
 on ffbm
     start fastmmisrv
 
+service hvdcp /system/bin/hvdcp
+    class core
+    user root
+    disabled
+
+on property:persist.usb.hvdcp.detect=true
+    start hvdcp
+
+on property:persist.usb.hvdcp.detect=false
+    stop hvdcp
+
+service charger_monitor /system/bin/charger_monitor
+    user system
+    group system
+    disabled
+
 service diag_mdlog_start /system/bin/diag_mdlog
     class late_start
     user sdcard_rw
@@ -875,7 +967,7 @@ service diag_mdlog_stop /system/bin/diag_mdlog -k
     oneshot
 
 on property:ro.minios.enable=1
-    start zetaw-post-boot
+    start gammaw-post-boot
 
 # Factory, ATD
 service atd /system/bin/atd /dev/ttyGS0 /dev/smd0
@@ -903,25 +995,6 @@ on property:sys.lge.touchsensingtest=0
     write /sys/devices/virtual/input/lge_touch/sensing_test 0
     setprop sys.lge.touchsensingtest 2
 
-on property:ril.lge.touch.callstate=0
-    write /sys/devices/virtual/input/lge_touch/incoming_call 0
-on property:ril.lge.touch.callstate=1
-    write /sys/devices/virtual/input/lge_touch/incoming_call 1
-on property:ril.lge.touch.callstate=2
-    write /sys/devices/virtual/input/lge_touch/incoming_call 2
-
-on property:service.keyguard.status=0
-    write /sys/devices/virtual/input/lge_touch/lockscreen 0
-on property:service.keyguard.status=1
-    write /sys/devices/virtual/input/lge_touch/lockscreen 1
-on property:service.keyguard.status=2
-    write /sys/devices/virtual/input/lge_touch/lockscreen 2
-
-service qseecomd /system/bin/qseecomd
-    class late_start
-    user root
-    group root
-
 # lge hidden menu can set parameters persist.service.crash.enable
 # rtb log enable and ftrace event enable
 on property:persist.service.crash.enable=1
@@ -933,7 +1006,6 @@ on property:persist.service.crash.enable=1
     write /sys/kernel/debug/tracing/events/workqueue/workqueue_execute_start/enable 1
     write /sys/kernel/debug/tracing/events/workqueue/workqueue_execute_end/enable 1
     write /sys/module/lge_handle_panic/parameters/no_powermode 1
-
 on property:persist.service.crash.enable=0
     write /sys/module/restart/parameters/download_mode 0
     write /sys/module/msm_rtb/parameters/filter 0
@@ -944,24 +1016,22 @@ on property:persist.service.crash.enable=0
     write /sys/kernel/debug/tracing/events/workqueue/workqueue_execute_end/enable 0
     write /sys/module/lge_handle_panic/parameters/no_powermode 0
 
-service hvdcp /system/bin/hvdcp
-    class core
+# LG_BTUI : BDADDR_LOADER [s]
+service bdaddr_loader /system/bin/bdaddr_loader
     user root
+    group bluetooth net_bt_admin misc net_bt_stack
     disabled
+    oneshot
+# LG_BTUI : BDADDR_LOADER [e]
 
-on property:persist.usb.hvdcp.detect=true
-    start hvdcp
-
-on property:persist.usb.hvdcp.detect=false
-    stop hvdcp
 
 # 2013.05.13 real-wifi@lge.com[woOgi] TestMode Daemon for QCT driver
 service ftm_ptt /system/bin/ftm_ptt -d
     class late_start
-    user root
-    group radio
-    disabled
-    oneshot
+	user root
+	group radio
+	disabled
+	oneshot
 
 on property:hw.ftm_ptt_start=1
     start ftm_ptt
@@ -970,13 +1040,12 @@ on property:hw.ftm_ptt_start=0
     stop ftm_ptt
 # 2013.05.13 real-wifi@lge.com[woOgi] TestMode Daemon for QCT driver
 
-# LG_BTUI : BDADDR_LOADER [s]
-service bdaddr_loader /system/bin/bdaddr_loader
-    user root
-    group bluetooth net_bt_admin misc net_bt_stack
-    disabled
-    oneshot
-# LG_BTUI : BDADDR_LOADER [e]
+on property:rild.modem_restart=silence
+    write /sys/module/lge_handle_panic/parameters/gen_modem_panic 2
+
+service ssbd /system/bin/ssbd
+    class main
+    socket ssbd stream 0660 root mount
 
 # Modem-bsp, SSR Ramdump Application
 service ssr_dump /system/bin/subsystem_ramdump 1
@@ -995,7 +1064,7 @@ on property:persist.service.ssr_dump.enable=0
 on property:persist.service.ssr_dump.ssr=1
     write /sys/devices/fc880000.qcom,mss/subsys1/restart_level RELATED
 on property:persist.service.ssr_dump.ssr=0
-    write /sys/devices/fc880000.qcom,mss/subsys1/restart_level SYSTEM 
+    write /sys/devices/fc880000.qcom,mss/subsys1/restart_level SYSTEM
 
 # [BEGIN][LGE_WIFI][QCT][neo-wifi@lge.com] add riva_ramdump service
 on property:persist.service.rivadump.enable=1
@@ -1015,7 +1084,7 @@ service riva_ramdump /system/bin/riva_ramdump
 #LGE_CHANGE_S 2012.04 for MOCA
 service moca_service /system/bin/moca -s
     class late_start
-    user root 
+    user root
     group system sdcard_r sdcard_rw radio
     disabled
     oneshot
@@ -1023,7 +1092,7 @@ service moca_service /system/bin/moca -s
 
 service moca_restart /system/bin/moca_restart
     class late_start
-    user root 
+    user root
     group system sdcard_r sdcard_rw radio
     disabled
     oneshot
@@ -1034,7 +1103,7 @@ service moca_ssr_ramdump /system/bin/subsystem_ramdump 1
     group system sdcard_r sdcard_rw radio
     disabled
     oneshot
-	
+
 on property:persist.service.moca.enable=1
     start moca_service
     start moca_restart
@@ -1050,40 +1119,21 @@ on property:persist.service.moca.enable=0
     start moca_service_disable
 #LGE_CHANGE_E 2012.04 for MOCA
 
-on property:rild.modem_restart=silence
-    write /sys/module/lge_handle_panic/parameters/gen_modem_panic 2
+#LGE_CHANGE_S, 20131206 add AICL start routin
+service charger_monitor /system/bin/charger_monitor
+    user system
+    group system
 
-# byungil.choi@lge.com for SW IrRC
-service irrcServer /system/bin/irrcServer
-   class main
-   user media
-   group media
-   onrestart restart irrcServer
-
-service ssbd /system/bin/ssbd
-    class main
-    socket ssbd stream 0660 root mount
-
-# CM Performance Profiles
-
-# Powersave
-on property:sys.perf.profile=0
-    start mpdecision
-    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor powersave
-    write /sys/class/devfreq/qcom,cpubw.55 powersave
-
-# Balanced
-on property:sys.perf.profile=1
-    start mpdecision
-    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor interactive
-    write /sys/class/devfreq/qcom,cpubw.55 msm_cpufreq
-
-# High performance
-on property:sys.perf.profile=2
-    stop mpdecision
-    write /sys/devices/system/cpu/cpu0/online 1
-    write /sys/devices/system/cpu/cpu1/online 1
-    write /sys/devices/system/cpu/cpu2/online 1
-    write /sys/devices/system/cpu/cpu3/online 1
-    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor performance
-    write /sys/class/devfreq/qcom,cpubw.65 performance
+on charger-monitor
+    chown root system /sys/module/qpnp_charger/parameters/charger_monitor
+    chown root system /sys/class/power_supply/battery/input_current_max
+    chown root system /sys/class/power_supply/battery/input_current_trim
+    chown root system /sys/class/power_supply/battery/voltage_min
+    chown root system /sys/class/power_supply/battery/input_current_settled
+    chmod 0664 /sys/class/power_supply/battery/input_current_max
+    chmod 0664 /sys/class/power_supply/battery/input_current_trim
+    chmod 0664 /sys/class/power_supply/battery/voltage_min
+    chmod 0664 /sys/class/power_supply/battery/input_current_settled
+    chmod 0664 /sys/module/qpnp_charger/parameters/charger_monitor
+    start charger_monitor
+#LGE_CHANGE_E, 20131205 add AICL start routin

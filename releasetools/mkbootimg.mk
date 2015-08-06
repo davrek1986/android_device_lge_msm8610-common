@@ -6,7 +6,7 @@ LOCAL_PATH := $(call my-dir)
 MSM8610_DTS_TARGET ?= msm8610-w5_global_com
 
 
-## Don't change anything under here. The variables are named W5_whatever
+## Don't change anything under here. The variables are named MSM8610_whatever
 ## on purpose, to avoid conflicts with similarly named variables at other
 ## parts of the build environment
 
@@ -23,7 +23,7 @@ DTC = $(KERNEL_OUT)/scripts/dtc/dtc
 
 define append-msm8610-dtb
 mkdir -p $(KERNEL_OUT)/arch/arm/boot;\
-$(foreach W5C_DTS_NAME, $(MSM8610_DTS_NAMES), \
+$(foreach MSM8610_DTS_NAME, $(MSM8610_DTS_NAMES), \
    $(foreach d, $(MSM8610_DTS_FILES), \
       $(DTC) -p 1024 -O dtb -o $(call DTB_FILE,$(d)) $(d); \
       cat $(KERNEL_ZIMG) $(call DTB_FILE,$(d)) > $(call ZIMG_FILE,$(d));))

@@ -60,26 +60,24 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/etc/fstab.msm8610:root/fstab.msm8610 \
     $(LOCAL_PATH)/rootdir/etc/init.class_main.sh:root/init.class_main.sh \
+    $(LOCAL_PATH)/rootdir/etc/init.gammaw.class_core.sh:root/init.gammaw.class_core.sh \
+    $(LOCAL_PATH)/rootdir/etc/init.gammaw.cmm.usb.sh:root/init.gammaw.cmm.usb.sh \
+    $(LOCAL_PATH)/rootdir/etc/init.gammaw.early_boot.sh:root/init.gammaw.early_boot.sh \
+    $(LOCAL_PATH)/rootdir/etc/init.gammaw.factory.sh:root/init.gammaw.factory.sh \
+    $(LOCAL_PATH)/rootdir/etc/init.gammaw.rc:root/init.gammaw.rc \
+    $(LOCAL_PATH)/rootdir/etc/init.gammaw.ril.sh:root/init.gammaw.ril.sh \
+    $(LOCAL_PATH)/rootdir/etc/init.gammaw.sh:root/init.gammaw.sh \
+    $(LOCAL_PATH)/rootdir/etc/init.gammaw.ssr.sh:root/init.gammaw.ssr.sh \
+    $(LOCAL_PATH)/rootdir/etc/init.gammaw.syspart_fixup.sh:root/init.gammaw.syspart_fixup.sh \
+    $(LOCAL_PATH)/rootdir/etc/init.gammaw.usb.rc:root/init.gammaw.usb.rc \
+    $(LOCAL_PATH)/rootdir/etc/init.gammaw.usb.sh:root/init.gammaw.usb.sh \
     $(LOCAL_PATH)/rootdir/etc/init.lge.early.rc:root/init.lge.early.rc \
     $(LOCAL_PATH)/rootdir/etc/init.lge.log.rc:root/init.lge.log.rc \
     $(LOCAL_PATH)/rootdir/etc/init.lge.rc:root/init.lge.rc \
     $(LOCAL_PATH)/rootdir/etc/init.mdm.sh:root/init.mdm.sh \
-    $(LOCAL_PATH)/rootdir/etc/init.usb.rc:root/init.usb.rc \
     $(LOCAL_PATH)/rootdir/etc/init.msm8610.rc:root/init.msm8610.rc \
     $(LOCAL_PATH)/rootdir/etc/init.msm8610.usb.rc:root/init.msm8610.usb.rc \
     $(LOCAL_PATH)/rootdir/etc/init.msm8610_product.rc:root/init.msm8610_product.rc \
-    $(LOCAL_PATH)/rootdir/etc/init.zetaw.bt_vendor.rc:root/init.zetaw.bt_vendor.rc \
-    $(LOCAL_PATH)/rootdir/etc/init.zetaw.class_core.sh:root/init.zetaw.class_core.sh \
-    $(LOCAL_PATH)/rootdir/etc/init.zetaw.cmm.usb.sh:root/init.zetaw.cmm.usb.sh \
-    $(LOCAL_PATH)/rootdir/etc/init.zetaw.early_boot.sh:root/init.zetaw.early_boot.sh \
-    $(LOCAL_PATH)/rootdir/etc/init.zetaw.factory.sh:root/init.zetaw.factory.sh \
-    $(LOCAL_PATH)/rootdir/etc/init.zetaw.rc:root/init.zetaw.rc \
-    $(LOCAL_PATH)/rootdir/etc/init.zetaw.ril.sh:root/init.zetaw.ril.sh \
-    $(LOCAL_PATH)/rootdir/etc/init.zetaw.sh:root/init.zetaw.sh \
-    $(LOCAL_PATH)/rootdir/etc/init.zetaw.ssr.sh:root/init.zetaw.ssr.sh \
-    $(LOCAL_PATH)/rootdir/etc/init.zetaw.syspart_fixup.sh:root/init.zetaw.syspart_fixup.sh \
-    $(LOCAL_PATH)/rootdir/etc/init.zetaw.usb.rc:root/init.zetaw.usb.rc \
-    $(LOCAL_PATH)/rootdir/etc/init.zetaw.usb.sh:root/init.zetaw.usb.sh \
     $(LOCAL_PATH)/rootdir/etc/ueventd.msm8610.rc:root/ueventd.msm8610.rc
 
 PRODUCT_COPY_FILES += \

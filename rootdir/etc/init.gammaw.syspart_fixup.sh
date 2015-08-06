@@ -51,23 +51,23 @@ fi
 # prevent slowdown at boot.
 
 # Run modem link script
-if [ -f /system/etc/init.zetaw.modem_links.sh ]; then
-  /system/bin/sh /system/etc/init.zetaw.modem_links.sh
+if [ -f /system/etc/init.gammaw.modem_links.sh ]; then
+  /system/bin/sh /system/etc/init.gammaw.modem_links.sh
 fi
 
 # Run mdm link script
-if [ -f /system/etc/init.zetaw.mdm_links.sh ]; then
-  /system/bin/sh /system/etc/init.zetaw.mdm_links.sh
+if [ -f /system/etc/init.gammaw.mdm_links.sh ]; then
+  /system/bin/sh /system/etc/init.gammaw.mdm_links.sh
 fi
 
 # Run wifi script
-if [ -f /system/etc/init.zetaw.wifi.sh ]; then
-  /system/bin/sh /system/etc/init.zetaw.wifi.sh "$target" "$serial"
+if [ -f /system/etc/init.gammaw.wifi.sh ]; then
+  /system/bin/sh /system/etc/init.gammaw.wifi.sh "$target" "$serial"
 fi
 
 # Run the sensor script
-if [ -f /system/etc/init.zetaw.sensor.sh ]; then
-  /system/bin/sh /system/etc/init.zetaw.sensor.sh
+if [ -f /system/etc/init.gammaw.sensor.sh ]; then
+  /system/bin/sh /system/etc/init.gammaw.sensor.sh
 fi
 
 # Run usf script

@@ -30,16 +30,29 @@
 
 #
 # When boot is completed and persist.sys.usb.config is "boot",
-# set persist.sys.usb.config into default mode.
+# set persist.sys.usb.config into default mode. Also, inform
+# it's mode to cdrom driver for autorun.
+# default of VZW is mtp only.
 #
+
+# VZW is mtp_only, always autorun enabled
+default_cdrom_mode=1
 
 usb_config=`getprop persist.sys.usb.config`
 case "$usb_config" in
-	"boot") #factory status, select default
-		setprop persist.sys.usb.config charge_only
-	;;
-	"boot,adb") #factory status, select default
-		setprop persist.sys.usb.config charge_only,adb
-	;;
-	*) ;; #USB persist config exists, do nothing
+    "boot") #factory status, select default
+        # Inform default mode to cdrom driver.
+        echo $default_cdrom_mode > /sys/class/android_usb/android0/f_cdrom_storage/lun/cdrom_usbmode
+
+        # Now, set cdrom mode to enable autorun
+        setprop persist.sys.usb.config cdrom_storage
+    ;;
+    "boot,adb") #factory status, select default
+        # Inform default mode to cdrom driver.
+        echo $default_cdrom_mode > /sys/class/android_usb/android0/f_cdrom_storage/lun/cdrom_usbmode
+
+        # Now, set cdrom mode to enable autorun
+        setprop persist.sys.usb.config cdrom_storage,adb
+    ;;
+    *) ;; #USB persist config exists, do nothing
 esac

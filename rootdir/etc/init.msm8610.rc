@@ -1,73 +1,81 @@
-import /init.zetaw.rc
+import /init.gammaw.rc
 import /init.msm8610.usb.rc
 import /init.msm8610_product.rc
 
 on early-init
     mkdir /firmware 0771 system system
     symlink /data/tombstones /tombstones
+#    write /sys/kernel/mm/ksm/pages_to_scan 100
+#    write /sys/kernel/mm/ksm/sleep_millisecs 500
+#    write /sys/kernel/mm/ksm/run 1
+#    write /sys/block/zram0/disksize 192M
 
 on init
 
-    chmod 755 /sbin/bbx
-    chmod 755 /fscheck.sh
-    exec /fscheck.sh
-
-    write /sys/class/input/input1/enable 1
-
-    # CM: We use our own ril-daemon service definition, see mmi-ril-daemon
-    stop ril-daemon
+# Begin Immersion changes
+    export VIBE_PIPE_PATH /dev/pipes
+    mkdir /dev/pipes 0771 shell shell
+# End Immersion changes
 
 on fs
     mount_all fstab.msm8610
-   
+    
+    # Executing tune2fs to reserve some region in /data. (40MB)
+    exec /system/bin/tune2fs -u system -r 10240 /dev/block/platform/msm_sdcc.1/by-name/userdata
+    
     # Keeping following partitions outside fstab file. As user may not have
     # these partition flashed on the device. Failure to mount any partition in fstab file
     # results in failure to launch late-start class.
 
     wait /dev/block/platform/msm_sdcc.1/by-name/modem
     mount vfat /dev/block/platform/msm_sdcc.1/by-name/modem /firmware ro shortname=lower,uid=1000,gid=1000,dmask=227,fmask=337
-
     write /sys/kernel/boot_adsp/boot 1
 
 # In order to keep plenty of large order chunks.
     write /proc/sys/vm/min_free_kbytes 5120
+on boot
+#   write /proc/sys/vm/page-cluster 0
+   write /proc/sys/vm/swappiness 100
 
 on post-fs-data
     mkdir /data/tombstones 0771 system system
     mkdir /tombstones/modem 0771 system system
 
-    setprop vold.post_fs_data_done 1
+#IRRC Driver    
+chown system audio /dev/msm_IRRC_pcm_dec
+chmod 0660 /dev/msm_IRRC_pcm_dec
 
-on early-boot
+# This is requested by VZW. Do not refer or copy below. This is for only VZW.
+    setprop ro.device.memory.system  0
+    setprop ro.device.memory.internal 4
+
+# Allow usb charging to be disabled persistently
+on property:persist.usb.chgdisabled=1
+    write /sys/class/power_supply/battery/charging_enabled 0
+
+on property:persist.usb.chgdisabled=0
+    write /sys/class/power_supply/battery/charging_enabled 1
 
 on boot
+    insmod /system/lib/modules/adsprpc.ko
+    chown system system /sys/class/power_supply/battery/pseudo_batt
+    chown system system /sys/devices/virtual/input/lge_touch/lpwg_notify
+    chown system system /sys/devices/virtual/input/lge_touch/lpwg_data
 
-#start camera server as daemon
-service qcamerasvr /system/bin/mm-qcamera-daemon
-    class late_start
-    user camera
-    group camera system inet input graphics
+#SELinux, partition labeling, security-selinux-task@lge.com
+    restorecon /eri
 
-#LGE_CHANGE_S, restart qcamerasvr when restarting mediaserver and servicemanager, yousung.kang@lge.com
-on property:init.svc.media=restarting
-    restart qcamerasvr
-on property:init.svc.servicemanager=restarting
-    restart qcamerasvr
-#LGE_CHANGE_E, restart qcamerasvr when restarting mediaserver and servicemanager, yousung.kang@lge.com
-
-# Allow usb charging to be disabled persistently
-on property:persist.usb.chgdisabled=1
-   write /sys/class/power_supply/battery/charging_enabled 0
-
-on property:persist.usb.chgdisabled=0
-   write /sys/class/power_supply/battery/charging_enabled 1
-
-# Allow usb charging to be disabled persistently
-on property:persist.usb.chgdisabled=1
-   write /sys/class/power_supply/battery/charging_enabled 0
-
-on property:persist.usb.chgdisabled=0
-   write /sys/class/power_supply/battery/charging_enabled 1
+#LGE_CHANGE_S, for LP5521 RGB_LED
+    chown system system /sys/class/leds/R/device/led_current_index
+    chown system system /sys/class/leds/R/device/led_pattern
+    chown system system /sys/class/leds/R/device/led_blink
+    chown system system /sys/class/leds/R/brightness
+    chown system system /sys/class/leds/G/brightness
+    chown system system /sys/class/leds/B/brightness
+    chown system system /sys/class/leds/R/led_current
+    chown system system /sys/class/leds/G/led_current
+    chown system system /sys/class/leds/B/led_current
+#LGE_CHANGE_E, for LP5521 RGB_LED
 
 on property:persist.service.fakebatt=1
     write /sys/class/power_supply/battery/pseudo_batt "1 1 100 40 4100 80 1"
@@ -84,11 +92,30 @@ service mpdecision /system/bin/mpdecision --no_sleep --avg_comp
    user root
    disabled
 
+#start GNSS/Sensor interface daemon
+service gsiff_daemon /system/bin/gsiff_daemon
+   class late_start
+   user system
+   group gps net_raw
+
 service thermal-engine /system/bin/thermal-engine
    class main
    user root
    group root
-  
+
+service qseecomd /system/bin/qseecomd
+	class late_start
+	user root
+	group root
+   
+# Begin Immersion changes
+service immvibed /system/bin/immvibed
+    class main
+    user shell
+    group shell system
+    oneshot
+# End Immersion changes
+
 service qrngd /system/bin/qrngd -f
    class main
    user root
@@ -104,14 +131,33 @@ service qrngp /system/bin/qrngp
 on property:sys.boot_completed=1
     start qrngp
 
-service audiod /system/bin/audiod
+service sensord /system/bin/sensord  
+    class late_start
+        oneshot 
+
+# LG RCT(Rooting Check Tool) FEATURE
+service rctd /system/bin/rctd
+    class late_start
+    user root
+    group root
+
+#start camera server as daemon
+service qcamerasvr /system/bin/mm-qcamera-daemon
    class late_start
-   user system
-   group system
+   user camera
+   group camera system inet input graphics
 
-on boot
+#LGE_CHANGE_S, restart qcamerasvr when restarting mediaserver and servicemanager, yousung.kang@lge.com
+on property:init.svc.media=restarting
+    restart qcamerasvr
+on property:init.svc.servicemanager=restarting
+    restart qcamerasvr
+#LGE_CHANGE_E, restart qcamerasvr when restarting mediaserver and servicemanager, yousung.kang@lge.com
 
-    chown system system /sys/class/power_supply/battery/pseudo_batt
+#service swapping /system/bin/sh /system/etc/enable_swap.sh
+#    class core
+#    user root
+#    oneshot
 
 service adsprpcd /system/bin/adsprpcd
    class main
@@ -119,10 +165,10 @@ service adsprpcd /system/bin/adsprpcd
    group media
 
 service wcnss-service /system/bin/wcnss_service
-   class late_start
-   user root
-   group system wifi
-   oneshot
+    class late_start
+    user root
+    group system wifi
+    oneshot
 
 service ppd /system/bin/mm-pp-daemon
     class late_start
@@ -133,17 +179,15 @@ service ppd /system/bin/mm-pp-daemon
 on property:init.svc.surfaceflinger=stopped
     stop ppd
 
+   service bnrd /system/bin/bnrd
+         class main
+         socket bnrd stream 660 root system
+         user root
+         group system radio sdcard_rw
 
-# Define call duration feature
-on property:ro.lge.callduration=1
-    mkdir /persist-lg/callduration 0770 system radio
-    chown system radio /persist-lg/callduration
-    chmod 0770 /persist-lg/callduration
-
-service mmi-ril-daemon /system/bin/rild
-    class main
-    socket rild stream 660 root radio
-    socket rild-debug stream 660 radio system
-    socket cutback stream 660 media radio
-    user root
-    group radio cache inet misc audio sdcard_rw qcom_oncrpc qcom_diag log net_raw diag
+#LGE_UPDATE_S LGE_PM_SMPL_COUNT
+	service smpl_count /system/bin/smpl_count
+	class main
+			user root
+			oneshot
+#LGE_UPDATE_E LGE_PM_SMPL_COUNT

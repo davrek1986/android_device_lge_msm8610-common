@@ -1,17 +1,43 @@
+on post-fs-data
+	#2013.06.20 LGE_CHANGE_S youngmin.kwon@lge.com, thermal senario change about LCD brightness
+	chown system system /sys/class/leds/lcd-backlight/thermald_status
+	chmod 0644 /sys/class/leds/lcd-backlight/thermald_status
+	#2013.06.20 LGE_CHANGE_E youngmin.kwon@lge.com, thermal senario change about LCD brightness
+
 on init
-	mkdir /mpt 0775 system system
-	mkdir /cust 0771 system system
-	wait /dev/block/platform/msm_sdcc.1/by-name/mpt
-	wait /dev/block/platform/msm_sdcc.1/by-name/cust
-	exec /sbin/setup_fs_static /dev/block/platform/msm_sdcc.1/by-name/mpt /dev/block/platform/msm_sdcc.1/by-name/cust no_reboot
+	wait /dev/block/platform/msm_sdcc.1/by-name/eri
+	exec /sbin/setup_fs_static /dev/block/platform/msm_sdcc.1/by-name/eri no_reboot
 
 on fs
-	wait /dev/block/platform/msm_sdcc.1/by-name/cust
-	exec /system/bin/e2fsck -p /dev/block/platform/msm_sdcc.1/by-name/cust
-	mount ext4 /dev/block/platform/msm_sdcc.1/by-name/cust /cust ro nodev barrier=1 noauto_da_alloc
+	mkdir /eri 0771 system radio
+	wait /dev/block/platform/msm_sdcc.1/by-name/eri
+	exec /system/bin/e2fsck -p /dev/block/platform/msm_sdcc.1/by-name/eri
+	mount ext4 /dev/block/platform/msm_sdcc.1/by-name/eri /eri nodev barrier=1 noauto_da_alloc
 
 on post-fs-data
-	chown system system /mpt
-	chmod 0775 /mpt
-	chown system system /cust
-	chmod 0771 /cust
+	chown system radio /eri
+	chmod 771 /eri
+
+on boot
+# [LGE_VPN][shpark82.park] Inside Secure VPN Kernel Module install
+    insmod /system/lib/modules/vpnclient.ko ssh_procfs_uid=1000 ssh_procfs_gid=1000
+
+
+# [LGE_VPN][shpark82.park] Inside Secure VPN Kernel Module install [START]
+service vpnclientpm /system/bin/vpnclientpm -O /data/data/com.ipsec.vpnclient/vpnclientpm.txt -D*Pm*=99,*Netconfig*=99 -K*=99 -u 1000
+# uid dropped to system when capabilities are set
+    class main
+    group system net_admin net_raw
+    disabled
+
+service secstarter /system/bin/secstarter
+    class main
+    user system
+    group system net_admin net_raw
+# [LGE_VPN][shpark82.park] Inside Secure VPN Service & modules permission change [END]
+
+# FIPS (for data encryption)
+service ufips /system/bin/ufips
+    class core
+    user system
+    group system
