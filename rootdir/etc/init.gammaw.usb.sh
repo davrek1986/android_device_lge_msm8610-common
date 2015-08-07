@@ -36,7 +36,6 @@
 serialno=`getprop persist.usb.serialno`
 case "$serialno" in
     "")
-    model=`getprop ro.model.name`
     serialnum=`getprop ro.serialno`
     case "$serialnum" in
         "");; #Do nothing, use default serial number
@@ -48,8 +47,8 @@ case "$serialno" in
     echo "$serialno" > /sys/class/android_usb/android0/iSerial
 esac
 
-chown root.system /sys/devices/platform/msm_hsusb/gadget/wakeup
-chmod 220 /sys/devices/platform/msm_hsusb/gadget/wakeup
+chown -h root.system /sys/devices/platform/msm_hsusb/gadget/wakeup
+chmod -h 220 /sys/devices/platform/msm_hsusb/gadget/wakeup
 
 #
 # Allow persistent usb charging disabling
@@ -71,31 +70,6 @@ case "$usbchgdisabled" in
     esac
 esac
 
-echo 1  > /sys/class/android_usb/f_mass_storage/lun/nofua
-echo 1  > /sys/class/android_usb/f_cdrom_storage/lun/nofua
-
-devicename=`getprop ro.product.model`
-case $devicename in
-	"");;
-	* )
-	    echo "$devicename" > /sys/devices/platform/lge_android_usb/model_name
-	;;
-esac
-swversion=`getprop ro.lge.swversion`
-case $swversion in
-	"");;
-	* )
-	    echo "$swversion" > /sys/devices/platform/lge_android_usb/sw_version
-	;;
-esac
-subversion=`getprop ro.lge.swversion_rev`
-case $subversion in
-	"");;
-	* )
-	    echo "$subversion" > /sys/devices/platform/lge_android_usb/sub_version
-	;;
-esac
-
 usbcurrentlimit=`getprop persist.usb.currentlimit`
 case "$usbcurrentlimit" in
     "") ;; #Do nothing here
@@ -106,63 +80,49 @@ case "$usbcurrentlimit" in
 	;;
     esac
 esac
-
 #
-# USB Autorun user mode Initialization on boot.
+# Allow USB enumeration with default PID/VID
 #
-# Internet connection mode (modem)    - 0
-#
-# USB Autorun user mode Initialization on boot.
-#
-# Internet connection mode (modem)    - 0
-# Internet connection mode (ethernet) - 5
-# MTP only mode                       - 1
-# PTP only mode                       - 6
-# Charge only mode                    - 4
-#
+echo 1  > /sys/class/android_usb/f_mass_storage/lun/nofua
 usb_config=`getprop persist.sys.usb.config`
-case "$usb_config" in
-    "pc_suite" | "pc_suite,adb")
-        echo 0 > /sys/class/android_usb/android0/f_cdrom_storage/lun/cdrom_usbmode
+bootmode=`getprop ro.bootmode`
+buildtype=`getprop ro.build.type`
+case "$bootmode" in
+    "bp-tools" )
+        setprop persist.sys.usb.config diag,serial_smd,serial_tty,rmnet,usbnet,adb
     ;;
-    "ecm" | "ecm,adb")
-        echo 5 > /sys/class/android_usb/android0/f_cdrom_storage/lun/cdrom_usbmode
+    "factory" )
+        setprop persist.sys.usb.config usbnet
     ;;
-    "mtp_only" | "mtp_only,adb")
-        echo 1 > /sys/class/android_usb/android0/f_cdrom_storage/lun/cdrom_usbmode
+    "qcom" )
+        setprop persist.sys.usb.config diag,serial_smd,serial_tty,rmnet_bam,mass_storage,adb
     ;;
-    "ptp_only" | "ptp_only,adb")
-        echo 6 > /sys/class/android_usb/android0/f_cdrom_storage/lun/cdrom_usbmode
+    * )
+        case "$usb_config" in
+            "ptp,adb" | "mtp,adb" | "mass_storage,adb" | "ptp" | "mtp" | "mass_storage" )
+            ;;
+            *)
+                case "$buildtype" in
+                    "user" )
+                        setprop persist.sys.usb.config mtp
+                    ;;
+                    * )
+                        setprop persist.sys.usb.config mtp,adb
+                    ;;
+                esac
+            ;;
+        esac
     ;;
-    "charge_only" | "charge_only,adb")
-        echo 4 > /sys/class/android_usb/android0/f_cdrom_storage/lun/cdrom_usbmode
-    ;;
-    *) ;; #USB persist config exists, do nothing
-esac
-
-#
-# Allow USB enumeration with LGE default PID/VID
-#
-usb_config=`getprop persist.sys.usb.config`
-case "$usb_config" in
-    #USB persist config not set, select default configuration
-    "")
-        setprop persist.sys.usb.config boot
-    ;;
-    "adb")
-        setprop persist.sys.usb.config boot,adb
-    ;;
-    * ) ;; #USB persist config exists, do nothing
 esac
 
 #
 # Add support for exposing lun0 as cdrom in mass-storage
 #
 target=`getprop ro.product.device`
-cdromname="/system/etc/cdrom_install.iso"
+cdromname="/dev/block/platform/msm_sdcc.1/by-name/cdrom"
 cdromenable=`getprop persist.service.cdrom.enable`
 case "$target" in
-        "msm7627a" | "msm8226")
+        "msm8226" | "msm8610")
                 case "$cdromenable" in
                         0)
                                 echo "" > /sys/class/android_usb/android0/f_mass_storage/lun0/file
@@ -180,7 +140,19 @@ esac
 #
 case "$target" in
     "msm8974")
-        echo ssusb > /sys/bus/platform/devices/usb_bam/enable
+        echo hsusb > /sys/bus/platform/devices/usb_bam/enable
+    ;;
+    "apq8084")
+	if [ "$baseband" == "apq" ]; then
+		echo "msm_hsic_host" > /sys/bus/platform/drivers/xhci_msm_hsic/unbind
+	fi
+    ;;
+    "msm8226")
+         if [ -e /sys/bus/platform/drivers/msm_hsic_host ]; then
+             if [ ! -L /sys/bus/usb/devices/1-1 ]; then
+                 echo msm_hsic_host > /sys/bus/platform/drivers/msm_hsic_host/unbind
+             fi
+         fi
     ;;
 esac
 
@@ -199,7 +171,7 @@ case "$baseband" in
         esac
         echo 1 > /sys/module/rmnet_usb/parameters/rmnet_data_init
         # Allow QMUX daemon to assign port open wait time
-        chown radio.radio /sys/devices/virtual/hsicctl/hsicctl0/modem_wait
+        chown -h radio.radio /sys/devices/virtual/hsicctl/hsicctl0/modem_wait
     ;;
     "dsda2")
           echo 2 > /sys/module/rmnet_usb/parameters/no_rmnet_devs
@@ -223,6 +195,6 @@ case "$baseband" in
           esac
           echo 1 > /sys/module/rmnet_usb/parameters/rmnet_data_init
           # Allow QMUX daemon to assign port open wait time
-          chown radio.radio /sys/devices/virtual/hsicctl/hsicctl0/modem_wait
+          chown -h radio.radio /sys/devices/virtual/hsicctl/hsicctl0/modem_wait
     ;;
 esac

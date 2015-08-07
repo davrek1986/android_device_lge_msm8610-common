@@ -62,19 +62,6 @@ on init
     symlink /storage/emulated/legacy /storage/sdcard0
     symlink /mnt/shell/emulated/0 /storage/emulated/legacy
 
-    # LGE_UPDATE_START, 2013/5/8, G2-FS@lge.com
-    wait /dev/block/platform/msm_sdcc.1/by-name/userdata
-    wait /dev/block/platform/msm_sdcc.1/by-name/cache
-    wait /dev/block/platform/msm_sdcc.1/by-name/drm
-    wait /dev/block/platform/msm_sdcc.1/by-name/sns
-    exec /sbin/setup_fs_static \
-        /dev/block/platform/msm_sdcc.1/by-name/userdata \
-        /dev/block/platform/msm_sdcc.1/by-name/cache \
-        /dev/block/platform/msm_sdcc.1/by-name/drm \
-        /dev/block/platform/msm_sdcc.1/by-name/sns \
-        no_reboot
-    # LGE_UPDATE_END
-
 # SD Enc
     setprop ro.ssbd.session /dev/block/platform/msm_sdcc.1/by-name/eksst
     setprop ro.ssbd.offset 0
@@ -265,6 +252,10 @@ on post-fs-data
     chown system system /sys/devices/platform/msm_sdcc.2/polling
     chown system system /sys/devices/platform/msm_sdcc.3/polling
     chown system system /sys/devices/platform/msm_sdcc.4/polling
+
+     # Allow Torch app use torch
+    chown system system /sys/class/leds/led:flash_torch/brightness
+    chmod 0666 /sys/class/leds/led:flash_torch/brightness
 
 # Mobile DM Router
     chmod 0660 /dev/lge_dm_tty0
