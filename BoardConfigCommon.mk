@@ -70,7 +70,7 @@ TARGET_RECOVERY_FSTAB := device/lge/msm8610-common/rootdir/etc/fstab.msm8610
 BOARD_USES_QCOM_HARDWARE := true
 
 # Lights
-TARGET_PROVIDES_LIBLIGHT := true
+#TARGET_PROVIDES_LIBLIGHT := true
 
 # Qualcomm PowerHAL
 TARGET_POWERHAL_VARIANT := qcom
