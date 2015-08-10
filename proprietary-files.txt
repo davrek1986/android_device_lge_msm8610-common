@@ -24,7 +24,6 @@ lib/libchromatix_imx119_preview.so
 lib/libchromatix_imx119_default_video.so
 lib/libvss_nv_core.so
 lib/hw/sensors.default.so
-lib/hw/lights.msm8610.so
 lib/hw/camera.msm8610.so
 lib/libvss_common_iface.so
 lib/libmmcamera_hi707.so

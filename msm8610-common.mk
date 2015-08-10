@@ -151,8 +151,8 @@ PRODUCT_PACKAGES += \
     libebtc
 
 # Lights
-#PRODUCT_PACKAGES += \
-#    lights.msm8610
+PRODUCT_PACKAGES += \
+    lights.msm8610
 
 # GPS
 PRODUCT_PACKAGES += \
