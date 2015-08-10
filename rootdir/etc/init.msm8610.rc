@@ -23,12 +23,6 @@ on fs
     # Executing tune2fs to reserve some region in /data. (40MB)
     exec /system/bin/tune2fs -u system -r 10240 /dev/block/platform/msm_sdcc.1/by-name/userdata
     
-    # Keeping following partitions outside fstab file. As user may not have
-    # these partition flashed on the device. Failure to mount any partition in fstab file
-    # results in failure to launch late-start class.
-
-    wait /dev/block/platform/msm_sdcc.1/by-name/modem
-    mount vfat /dev/block/platform/msm_sdcc.1/by-name/modem /firmware ro shortname=lower,uid=1000,gid=1000,dmask=227,fmask=337
     write /sys/kernel/boot_adsp/boot 1
 
 # In order to keep plenty of large order chunks.
@@ -66,9 +60,9 @@ on boot
     restorecon /eri
 
 #LGE_CHANGE_S, for LP5521 RGB_LED
-    chown system system /sys/class/leds/R/device/led_current_index
-    chown system system /sys/class/leds/R/device/led_pattern
-    chown system system /sys/class/leds/R/device/led_blink
+    chown system system /sys/devices/i2c.68/i2c-0/0-0032/led_current_index
+    chown system system /sys/devices/i2c.68/i2c-0/0-0032/led_pattern
+    chown system system /sys/devices/i2c.68/i2c-0/0-0032/led_blink
     chown system system /sys/class/leds/R/brightness
     chown system system /sys/class/leds/G/brightness
     chown system system /sys/class/leds/B/brightness
