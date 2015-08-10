@@ -139,3 +139,9 @@ WITH_DEXPREOPT_BOOT_IMG_ONLY ?= true
 
 # Include an expanded selection of fonts
 EXTENDED_FONT_FOOTPRINT := true
+
+# Qualcomm time
+BOARD_USES_QC_TIME_SERVICES := true
+
+# Device headers
+TARGET_SPECIFIC_HEADER_PATH := device/lge/g2-common/include
