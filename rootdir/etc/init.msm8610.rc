@@ -4,6 +4,7 @@ import /init.msm8610_product.rc
 
 on early-init
     mkdir /firmware 0771 system system
+    mkdir /eri 0771 system radio
     symlink /data/tombstones /tombstones
 #    write /sys/kernel/mm/ksm/pages_to_scan 100
 #    write /sys/kernel/mm/ksm/sleep_millisecs 500
@@ -22,6 +23,10 @@ on fs
     
     # Executing tune2fs to reserve some region in /data. (40MB)
     exec /system/bin/tune2fs -u system -r 10240 /dev/block/platform/msm_sdcc.1/by-name/userdata
+
+    wait /dev/block/platform/msm_sdcc.1/by-name/eri
+    exec /system/bin/e2fsck -p /dev/block/platform/msm_sdcc.1/by-name/eri
+    mount ext4 /dev/block/platform/msm_sdcc.1/by-name/eri /eri nodev barrier=1 noauto_da_alloc
     
     write /sys/kernel/boot_adsp/boot 1
 
@@ -32,6 +37,9 @@ on boot
    write /proc/sys/vm/swappiness 100
 
 on post-fs-data
+    chown system radio /eri
+    chmod 771 /eri
+
     mkdir /data/tombstones 0771 system system
     mkdir /tombstones/modem 0771 system system
 
@@ -56,7 +64,6 @@ on boot
     chown system system /sys/devices/virtual/input/lge_touch/lpwg_notify
     chown system system /sys/devices/virtual/input/lge_touch/lpwg_data
 
-#SELinux, partition labeling, security-selinux-task@lge.com
     restorecon /eri
 
 #LGE_CHANGE_S, for LP5521 RGB_LED
