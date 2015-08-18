@@ -144,7 +144,7 @@ EXTENDED_FONT_FOOTPRINT := true
 BOARD_USES_QC_TIME_SERVICES := true
 
 # Device headers
-TARGET_SPECIFIC_HEADER_PATH := device/lge/g2-common/include
+TARGET_SPECIFIC_HEADER_PATH := device/lge/msm8610-common/include
 
 # Vendor init
 TARGET_INIT_VENDOR_LIB := libinit_msm
